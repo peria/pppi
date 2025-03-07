@@ -1,3 +1,6 @@
+mod mul_assign;
+mod square_root;
+
 use super::integer::Integer;
 
 // Multi-precision floating number.
