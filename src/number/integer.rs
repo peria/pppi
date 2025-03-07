@@ -12,7 +12,7 @@ use super::Digit;
 
 // Non-negative integer.
 pub struct Integer {
-    limbs: Vec<Digit>,
+    pub limbs: Vec<Digit>,
 }
 
 impl Integer {

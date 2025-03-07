@@ -4,12 +4,9 @@ use super::Digit;
 use super::Integer;
 
 impl From<u64> for Integer {
-    fn from(mut value: u64) -> Self {
+    fn from(value: u64) -> Self {
         let mut limbs = Vec::new();
-        while value > 0 {
-            limbs.push(value);
-            value >>= 64;
-        }
+        limbs.push(value);
 
         Integer { limbs }
     }
