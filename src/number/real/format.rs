@@ -16,7 +16,7 @@ impl UpperHex for Real {
             n -= 1;
         }
 
-        for limb in x.limbs[..(n - 1)].iter().rev() {
+        for limb in x.limbs[..n].iter().rev() {
             write!(f, "{:016X}", limb)?;
         }
 

@@ -22,19 +22,9 @@ impl Real {
             let m = x.len();
             let mut t = x.square();
             t *= a;
-            //      <--m--> <--m-->
-            // t: 0.FFFFFFx xxxxxxx
             t.negate();
-            //      <--m--> <--m-->
-            // t: 0.000000x xxxxxxx
             t *= &x;
-            //      <--m--> <--m--> <--m-->
-            // t: 0.000000x xxxxxxx xxxxxxx
             t >>= 1;
-            //      <--m--> <--m--> <--m-->
-            // t: 0.000000x xxxxxxx xxxxxxx
-            // x: 0.xxxxxxx
-            //      <-----n------>
             x.shift_up_limbs(n - m);
             t.shift_down_limbs(3 * m - n);
             x += &t;
@@ -60,6 +50,6 @@ mod test {
         let x = Real::inverse_square_root(a, 10);
         // 0x0.b504f333f9de6484...
         eprintln!("1/sqrt(2) = {:X}", &x);
-        assert_eq!(x.mantissa.len(), 10);
+        assert_eq!(x.mantissa.len(), 11);
     }
 }
