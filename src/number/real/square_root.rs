@@ -47,9 +47,15 @@ mod test {
     #[test]
     fn test_inverse_square_root() {
         let a = 2;
-        let x = Real::inverse_square_root(a, 10);
-        // 0x0.b504f333f9de6484...
-        eprintln!("1/sqrt(2) = {:X}", &x);
-        assert_eq!(x.mantissa.len(), 11);
+        for n in [10, 1000, 10000] {
+            let x = Real::inverse_square_root(a, n);
+            // 0x0.b504f333f9de6484...
+            eprintln!("1/sqrt(2) = {:X}", &x);
+            assert_eq!(x.mantissa.len(), x.point);
+            let mut square = x.mantissa.square();
+            square *= a;
+            let actual = square.limbs[(square.len() - n)..].to_vec();
+            assert_eq!(actual, vec![!0u64; n]);
+        }
     }
 }
