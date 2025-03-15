@@ -13,7 +13,10 @@ impl Integer {
     }
 
     pub fn shift_down_limbs(&mut self, n: usize) {
-        debug_assert!(n < self.len());
+        if n >= self.len() {
+            self.limbs.clear();
+            return;
+        }
 
         let xn = self.len();
         for i in n..xn {
