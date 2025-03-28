@@ -1,5 +1,4 @@
 mod add_assign;
-mod div_assign;
 mod format;
 mod from;
 mod mul_assign;
@@ -11,6 +10,7 @@ mod sub_assign;
 use super::{BASE_F64, Digit};
 
 // Non-negative integer.
+#[derive(Debug, Clone)]
 pub struct Integer {
     pub limbs: Vec<Digit>,
 }

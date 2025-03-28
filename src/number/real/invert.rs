@@ -9,19 +9,16 @@ impl Real {
         let mut lens = Vec::new();
         while bits > 40 {
             let len = (bits + 127) / 64;
-            lens.push(len);
+            lens.push(len.min(limbs));
             bits = (bits + 1) / 2;
         }
 
         let a = &self.mantissa;
         let mut x = initialize_inversion(a);
-        eprintln!("{}> x: {:X}", line!(), &x);
         for n in lens.iter().rev() {
             let m = x.len();
             let mut t = a.get_leading(*n);
-            eprintln!("{}> t: {:X}", line!(), &t);
             t *= &x;
-            eprintln!("{}> t: {:X}", line!(), &t);
             //      <-m -> <----n ---->
             // t: 1.000000 xxxxx xxxxxx or
             //    0.FFFFFF xxxxx xxxxxx
@@ -36,30 +33,29 @@ impl Real {
             } else {
                 t.negate();
             }
-            eprintln!("{}> t: {:X}", line!(), &t);
             //      <-m -> <----n ---->
-            // t: 0.000000 xxxxx xxxxxx
+            // t: 0.000000 xxxxxx xxxxx
+            t.shift_down_limbs(m);
+            //      <---- n ---->
+            // t: 0.000000 xxxxxx .....
             t *= &x;
-            eprintln!("{}> t: {:X}", line!(), &t);
-            //      <-m -> <----n ---->
-            // t: 0.xxxxxx xxxxx xxxxxx
+            //      <---- n ---->
+            // t: 0.xxxxxx xxxxxx
             x.shift_up_limbs(n - m);
-            eprintln!("{}> x: {:X}", line!(), &x);
-            t.shift_down_limbs(2 * m);
-            eprintln!("{}> t: {:X}", line!(), &t);
-            //    <-m -> <-m -> <----n ---->
-            // x: xxxxxx
-            // t:      0.xxxxxx xxxxx xxxxxx
-            //    <-----n---->
+            t.shift_down_limbs(m - 1);
+            //    <- m ->
+            // x: xxxxxxx .....
+            //    <-----n----->
+            // t:       0.xxxxxxx xxxx
+            //            <----n ---->
             if is_over {
                 x -= &t;
             } else {
                 x += &t;
             }
-            eprintln!("{}> x: {:X}", line!(), &x);
         }
 
-        let point = a.len() + limbs;
+        let point = a.len() + limbs - 1;
         self.mantissa = x;
         self.point = point;
     }
@@ -77,38 +73,31 @@ fn initialize_inversion(a: &Integer) -> Integer {
 
 #[cfg(test)]
 mod test {
-    use crate::number::Digit;
     use crate::number::integer::Integer;
     use crate::number::real::Real;
 
-    const ALL5: Digit = 0x5555_5555_5555_5555;
-
     #[test]
     fn test_invert() {
-        let limbs = 20;
-        let a = Integer {
-            limbs: vec![
-                0xbee7_8cf5_02ad_8203,
-                0x4768_c384_530d_afe3,
-                0x1a04_5f01_7850_1e83,
-                0x47cb_fe52_3758_1bfa,
-                0xab18_793a_efea_cdfa,
-                0x1768_3241_0235_67ae,
-                0xcfbe_cfbc_bea8_fbac,
-                0xf451_0374_6923_fbeb,
-                0xfa50_bfed_fbac_cbfe,
-                0x1a04_5f01_7850_1e83,
-                0x47cb_fe52_3758_1bfa,
-                0xab18_793a_efea_cdfa,
-                0xcd74_9576_10ef_b412,
-                0x3238_567b_caec_afeb,
-                0x4587_123a_ceff_eccd,
-                0xfb01_1082_3774_8061,
-            ],
-        };
-        let mut x = Real::from(a);
-        x.invert(limbs);
-        eprintln!("{:X}", &x);
-        assert!(false);
+        let mut t = 12384348u64;
+        for n in [100, 500, 1000] {
+            let mut a = vec![0];
+            for _ in 0..n {
+                a.push(t);
+                t = xorshift64_next(t);
+            }
+            let a = Integer::from(a);
+            let mut x = Real::from(a.clone());
+            x.invert(n);
+            x.mantissa *= &a;
+            x.mantissa.shift_down_limbs(x.mantissa.len() - n + 1);
+            eprintln!("n = {}", n);
+            assert!(x.mantissa.limbs[0] >= (!0u64) - 1);
+        }
+    }
+
+    fn xorshift64_next(mut x: u64) -> u64 {
+        x ^= x << 7;
+        x ^= x >> 9;
+        x
     }
 }
