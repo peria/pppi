@@ -30,3 +30,9 @@ impl From<f64> for Integer {
         Integer { limbs }
     }
 }
+
+impl From<Vec<Digit>> for Integer {
+    fn from(value: Vec<Digit>) -> Self {
+        Integer { limbs: value }
+    }
+}
