@@ -1,19 +1,19 @@
-﻿use crate::bigint::BigUint;
+﻿use crate::bigint::Integer;
 
 #[derive(Debug, Clone)]
 pub struct SplitTerm {
-    pub p: BigUint,
-    pub q: BigUint,
-    pub t_positive: BigUint,
-    pub t_negative: BigUint,
+    pub p: Integer,
+    pub q: Integer,
+    pub t_positive: Integer,
+    pub t_negative: Integer,
 }
 
 impl SplitTerm {
-    pub fn from_signed_t(p: BigUint, q: BigUint, t: BigUint, t_is_negative: bool) -> Self {
+    pub fn from_signed_t(p: Integer, q: Integer, t: Integer, t_is_negative: bool) -> Self {
         let (t_positive, t_negative) = if t_is_negative {
-            (BigUint::zero(), t)
+            (Integer::zero(), t)
         } else {
-            (t, BigUint::zero())
+            (t, Integer::zero())
         };
 
         Self {
@@ -24,7 +24,7 @@ impl SplitTerm {
         }
     }
 
-    pub fn t_magnitude_when_positive(&self) -> BigUint {
+    pub fn t_magnitude_when_positive(&self) -> Integer {
         assert!(self.t_positive >= self.t_negative);
         self.t_positive.sub(&self.t_negative)
     }
@@ -44,20 +44,20 @@ impl PiFormula for Chudnovsky {
     fn term(&self, k: usize) -> SplitTerm {
         if k == 0 {
             return SplitTerm::from_signed_t(
-                BigUint::one(),
-                BigUint::one(),
-                BigUint::from_u64(13_591_409),
+                Integer::one(),
+                Integer::one(),
+                Integer::from(13_591_409),
                 false,
             );
         }
 
         let k_u64 = k as u64;
-        let p = BigUint::from_u64(6 * k_u64 - 5)
-            .mul(&BigUint::from_u64(2 * k_u64 - 1))
-            .mul(&BigUint::from_u64(6 * k_u64 - 1));
-        let q = BigUint::from_u64(k_u64)
-            .mul(&BigUint::from_u64(k_u64))
-            .mul(&BigUint::from_u64(k_u64))
+        let p = Integer::from(6 * k_u64 - 5)
+            .mul(&Integer::from(2 * k_u64 - 1))
+            .mul(&Integer::from(6 * k_u64 - 1));
+        let q = Integer::from(k_u64)
+            .mul(&Integer::from(k_u64))
+            .mul(&Integer::from(k_u64))
             .mul_u64(10_939_058_860_032_000);
         let t = p.mul_u64(13_591_409 + 545_140_134 * k_u64);
 
