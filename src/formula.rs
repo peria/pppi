@@ -1,81 +1,67 @@
 use crate::{bigint::Integer, binary_fixed::Fixed};
 
-#[derive(Debug, Clone)]
 pub struct DrmTerm {
     pub p: Integer,
     pub q: Integer,
-    pub t_positive: Integer,
-    pub t_negative: Integer,
-}
-
-impl DrmTerm {
-    pub fn from_signed_t(p: Integer, q: Integer, t: Integer, t_is_negative: bool) -> Self {
-        let (t_positive, t_negative) = if t_is_negative {
-            (Integer::zero(), t)
-        } else {
-            (t, Integer::zero())
-        };
-
-        Self {
-            p,
-            q,
-            t_positive,
-            t_negative,
-        }
-    }
-
-    pub fn t_magnitude_when_positive(&self) -> Integer {
-        assert!(self.t_positive >= self.t_negative);
-        &self.t_positive - &self.t_negative
-    }
+    pub t: Integer,
+    pub is_signed: bool,
 }
 
 pub trait Formula {
     fn compute(&self, digits: usize) -> Fixed;
 }
 
-pub trait PiFormula {
-    fn term(&self, k: usize) -> DrmTerm;
+pub trait DrmFormula<T>: Formula {
+    fn term(&self, k: usize) -> T;
     fn terms_for_digits(&self, digits: usize) -> usize;
-    fn multiplier(&self) -> u64;
-    fn sqrt_u64(&self) -> u64;
+    fn drm(&self, n0: usize, n1: usize) -> T;
 }
+
+pub trait SquareRootFormula: Formula {
+    fn multiplier(&self) -> u64;
+    fn inv_sqrt_u64(&self) -> u64;
+}
+
+pub trait PiFormula: DrmFormula<DrmTerm> + SquareRootFormula {}
 
 #[derive(Debug, Clone, Copy)]
 pub struct Chudnovsky;
 
-impl PiFormula for Chudnovsky {
+impl DrmFormula<DrmTerm> for Chudnovsky {
     fn term(&self, k: usize) -> DrmTerm {
-        if k == 0 {
-            return DrmTerm::from_signed_t(
-                Integer::one(),
-                Integer::one(),
-                Integer::from(13_591_409),
-                false,
-            );
-        }
-
-        let k_u64 = k as u64;
-        let p = &(&Integer::from(6 * k_u64 - 5) * &Integer::from(2 * k_u64 - 1))
-            * &Integer::from(6 * k_u64 - 1);
-        let k_int = Integer::from(k_u64);
-        let q = &(&k_int * &k_int) * &k_int;
-        let q = q.mul_u64(10_939_058_860_032_000);
-        let t = p.mul_u64(13_591_409 + 545_140_134 * k_u64);
-
-        DrmTerm::from_signed_t(p, q, t, k % 2 != 0)
+        let k = k as u64;
+        let mut x = Integer::from(k * Self::C);
+        x *= k * Self::C;
+        x *= k * Self::C / 24;
+        let mut y = Integer::from(Self::A + Self::B * k);
+        let mut z = Integer::from(6 * k - 1);
+        z *= 2 * k - 1;
+        z *= 6 * k - 5;
+        DrmTerm { x, y, z }
     }
 
     fn terms_for_digits(&self, digits: usize) -> usize {
         (digits as f64 / 14.181_647_462_725_477).ceil() as usize + 1
     }
 
-    fn multiplier(&self) -> u64 {
-        426_880
-    }
+    fn drm(&self, n0: usize, n1: usize) -> DrmTerm {
+        if n0 + 1 >= n1 {
+            return self.term(n1);
+        }
 
-    fn sqrt_u64(&self) -> u64 {
-        10_005
+        let m = (n0 + n1) / 2;
+        let mut left = self.drm(n0, m);
+        let right = self.drm(m, n1);
+        left.y *= &right.x;
+        right.y *= &left.z;
+        if (m - n0) % 2 == 1 {
+            left.y -= &right.y;
+        } else {
+            left.y += &right.y;
+        }
+        left.x *= &right.x;
+        left.z *= &right.z;
+        left
     }
 }
 
@@ -94,6 +80,12 @@ impl Formula for Chudnovsky {
 
         value
     }
+}
+
+impl Chudnovsky {
+    const A: u64 = 13591409;
+    const B: u64 = 545140134;
+    const C: u64 = 640320;
 }
 
 fn bits_for_decimal_digits(digits: usize) -> usize {
