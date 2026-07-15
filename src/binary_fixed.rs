@@ -15,14 +15,14 @@ impl Fixed {
     }
 
     pub fn from_u64(n: u64, precision_bits: usize) -> Self {
-        Self::from_scaled(Integer::from(n).shl_bits(precision_bits), precision_bits)
+        Self::from_scaled(Integer::from(n) << precision_bits, precision_bits)
     }
 
     pub fn from_f64(x: f64, precision_bits: usize) -> Self {
         assert!(x.is_finite() && x >= 0.0);
         let shift = precision_bits.saturating_sub(48);
         let scaled = (x * ((1u64 << 48) as f64)).round() as u64;
-        Self::from_scaled(Integer::from(scaled).shl_bits(shift), precision_bits)
+        Self::from_scaled(Integer::from(scaled) << shift, precision_bits)
     }
 
     pub fn inv_sqrt_u64(n: u64, precision_bits: usize) -> Self {
@@ -41,7 +41,7 @@ impl Fixed {
     pub fn mul(&self, rhs: &Self) -> Self {
         assert_eq!(self.precision_bits, rhs.precision_bits);
         Self::from_scaled(
-            self.value.mul(&rhs.value).shr_bits(self.precision_bits),
+            (&self.value * &rhs.value) >> self.precision_bits,
             self.precision_bits,
         )
     }
@@ -52,16 +52,16 @@ impl Fixed {
 
     pub fn sub(&self, rhs: &Self) -> Self {
         assert_eq!(self.precision_bits, rhs.precision_bits);
-        Self::from_scaled(self.value.sub(&rhs.value), self.precision_bits)
+        Self::from_scaled(&self.value - &rhs.value, self.precision_bits)
     }
 
     pub fn shr1(&self) -> Self {
-        Self::from_scaled(self.value.shr_bits(1), self.precision_bits)
+        Self::from_scaled(&self.value >> 1, self.precision_bits)
     }
 
     pub fn to_decimal(&self, digits: usize) -> String {
         let scale10 = pow10(digits);
-        let truncated = self.value.mul(&scale10).shr_bits(self.precision_bits);
+        let truncated = (&self.value * &scale10) >> self.precision_bits;
         let mut s = truncated.to_decimal_string();
 
         if digits == 0 {
@@ -86,7 +86,7 @@ pub fn divide_biguints_newton(
 
     let m = precision_bits + denominator.bits() + 8;
     let reciprocal = reciprocal_scaled_newton(denominator, m);
-    let shifted = numerator.mul(&reciprocal).shr_bits(m - precision_bits);
+    let shifted = (numerator * &reciprocal) >> (m - precision_bits);
 
     Fixed::from_scaled(shifted, precision_bits)
 }
@@ -95,12 +95,12 @@ fn reciprocal_scaled_newton(d: &Integer, scale_bits: usize) -> Integer {
     assert!(!d.is_zero());
 
     let mut x = reciprocal_seed(d, scale_bits);
-    let two_b = Integer::one().shl_bits(scale_bits + 1);
+    let two_b = Integer::one() << (scale_bits + 1);
 
     for _ in 0..newton_iterations(scale_bits) {
-        let dx = d.mul(&x);
-        let correction = two_b.sub(&dx);
-        x = x.mul(&correction).shr_bits(scale_bits);
+        let dx = d * &x;
+        let correction = &two_b - &dx;
+        x = (&x * &correction) >> scale_bits;
         if x.is_zero() {
             x = Integer::one();
         }
@@ -118,7 +118,7 @@ fn reciprocal_seed(d: &Integer, scale_bits: usize) -> Integer {
     if numerator_shift < 63 {
         Integer::from(((1u128 << numerator_shift) / top as u128) as u64)
     } else {
-        Integer::one().shl_bits(numerator_shift).div_u64(top)
+        (Integer::one() << numerator_shift).div_u64(top)
     }
 }
 

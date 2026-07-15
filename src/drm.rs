@@ -1,6 +1,6 @@
-﻿use crate::formula::{PiFormula, SplitTerm};
+use crate::formula::{DrmTerm, PiFormula};
 
-pub fn split<F: PiFormula>(formula: &F, a: usize, b: usize) -> SplitTerm {
+pub fn split<F: PiFormula>(formula: &F, a: usize, b: usize) -> DrmTerm {
     assert!(a < b, "empty DRM interval");
 
     if b - a == 1 {
@@ -11,16 +11,10 @@ pub fn split<F: PiFormula>(formula: &F, a: usize, b: usize) -> SplitTerm {
     let left = split(formula, a, m);
     let right = split(formula, m, b);
 
-    SplitTerm {
-        p: left.p.mul(&right.p),
-        q: left.q.mul(&right.q),
-        t_positive: left
-            .t_positive
-            .mul(&right.q)
-            .add(&left.p.mul(&right.t_positive)),
-        t_negative: left
-            .t_negative
-            .mul(&right.q)
-            .add(&left.p.mul(&right.t_negative)),
+    DrmTerm {
+        p: &left.p * &right.p,
+        q: &left.q * &right.q,
+        t_positive: &(&left.t_positive * &right.q) + &(&left.p * &right.t_positive),
+        t_negative: &(&left.t_negative * &right.q) + &(&left.p * &right.t_negative),
     }
 }
