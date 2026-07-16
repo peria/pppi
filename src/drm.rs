@@ -1,20 +1,36 @@
-use crate::formula::{Drm3Term, PiFormula};
+﻿use crate::bigint::Integer;
+use crate::formula::Formula;
 
-pub fn split<F: PiFormula>(formula: &F, a: usize, b: usize) -> Drm3Term {
-    assert!(a < b, "empty DRM interval");
+pub struct Drm3Term {
+    pub x: Integer,
+    pub y: Integer,
+    pub z: Integer,
+}
 
-    if b - a == 1 {
-        return formula.term(a);
-    }
+pub trait DrmFormula<T>: Formula {
+    fn terms_for_digits(&self, digits: usize) -> usize;
+    fn term(&self, k: usize) -> T;
+    fn run(&self, n: usize) -> (Integer, Integer);
+}
 
-    let m = (a + b) / 2;
-    let left = split(formula, a, m);
-    let right = split(formula, m, b);
+pub trait SignedDrm3Formula: DrmFormula<Drm3Term> {
+    fn drm(&self, n0: usize, n1: usize) -> Drm3Term {
+        if n0 + 1 >= n1 {
+            return self.term(n1);
+        }
 
-    Drm3Term {
-        p: &left.p * &right.p,
-        q: &left.q * &right.q,
-        t_positive: &(&left.t_positive * &right.q) + &(&left.p * &right.t_positive),
-        t_negative: &(&left.t_negative * &right.q) + &(&left.p * &right.t_negative),
+        let m = (n0 + n1) / 2;
+        let mut left = self.drm(n0, m);
+        let mut right = self.drm(m, n1);
+        left.y *= &right.x;
+        right.y *= &left.z;
+        if (m - n0) % 2 == 1 {
+            left.y -= &right.y;
+        } else {
+            left.y += &right.y;
+        }
+        left.x *= &right.x;
+        left.z *= &right.z;
+        left
     }
 }

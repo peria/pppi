@@ -1,45 +1,9 @@
-use crate::{bigint::Integer, binary_fixed::Fixed};
-
-pub struct Drm3Term {
-    pub x: Integer,
-    pub y: Integer,
-    pub z: Integer,
-}
+use crate::bigint::Integer;
+use crate::binary_fixed::Fixed;
+use crate::drm::{Drm3Term, DrmFormula, SignedDrm3Formula};
 
 pub trait Formula {
     fn compute(&self, digits: usize) -> Fixed;
-}
-
-pub trait DrmFormula<T>: Formula {
-    fn term(&self, k: usize) -> T;
-    fn terms_for_digits(&self, digits: usize) -> usize;
-    fn run(&self, n: usize) -> (Integer, Integer);
-}
-
-pub trait SquareRootFormula: Formula {
-    fn inv_sqrt_u64(&self) -> u64;
-}
-
-pub trait SignedDrm3Formula: DrmFormula<Drm3Term> {
-    fn drm(&self, n0: usize, n1: usize) -> Drm3Term {
-        if n0 + 1 >= n1 {
-            return self.term(n1);
-        }
-
-        let m = (n0 + n1) / 2;
-        let mut left = self.drm(n0, m);
-        let mut right = self.drm(m, n1);
-        left.y *= &right.x;
-        right.y *= &left.z;
-        if (m - n0) % 2 == 1 {
-            left.y -= &right.y;
-        } else {
-            left.y += &right.y;
-        }
-        left.x *= &right.x;
-        left.z *= &right.z;
-        left
-    }
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -63,9 +27,13 @@ impl DrmFormula<Drm3Term> for Chudnovsky {
     }
 
     fn run(&self, n: usize) -> (Integer, Integer) {
-        let term = self.drm(0, n);
-        let denominator = term.x * Self::A - term.y * 5;
-        let numerator = term.x * 4270934400;
+        let mut term = self.drm(0, n);
+        let (x, y) = (term.x, term.y);
+        y *= 5;
+        // A * x - y
+        let mut denominator = Integer::axmy(Self::A, &x, &y);
+        let mut numerator = x;
+        numerator *= 4270934400;
         (numerator, denominator)
     }
 }
@@ -77,15 +45,16 @@ impl Formula for Chudnovsky {
     fn compute(&self, digits: usize) -> Fixed {
         let terms = self.terms_for_digits(digits);
         let precision_bits = bits_for_decimal_digits(digits + 12);
-        // BUG: Final part of DRM is not well defined.
-        let drm_terms = self.drm(0, terms);
-        // `z` is no longer used.
-        let (x, y) = (drm_terms.x, drm_terms.y);
-        let reciprocal_sum = Fixed::divide(&y, &x, precision_bits);
+        let (x, y) = self.run(terms);
+        let reciprocal = Fixed::divide(y, x, precision_bits);
         let mut value = Fixed::inv_sqrt_u64(self.inv_sqrt_u64(), precision_bits);
-        value *= &reciprocal_sum;
+        value *= &reciprocal;
         value
     }
+}
+
+pub trait SquareRootFormula: Formula {
+    fn inv_sqrt_u64(&self) -> u64;
 }
 
 impl SquareRootFormula for Chudnovsky {
