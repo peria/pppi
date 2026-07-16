@@ -1,5 +1,5 @@
 use std::cmp::Ordering;
-use std::ops::{Add, Mul, Shl, Shr, Sub};
+use std::ops::{Add, AddAssign, Mul, MulAssign, Shl, Shr, Sub, SubAssign};
 
 pub type Limb = u64;
 
@@ -11,18 +11,6 @@ pub struct Integer {
 }
 
 impl Integer {
-    pub fn zero() -> Self {
-        Self { limbs: Vec::new() }
-    }
-
-    pub fn one() -> Self {
-        Self::from(1)
-    }
-
-    pub fn is_zero(&self) -> bool {
-        self.limbs.is_empty()
-    }
-
     pub fn bits(&self) -> usize {
         match self.limbs.last() {
             Some(&top) => {
@@ -261,43 +249,23 @@ impl Add<&Integer> for Integer {
     }
 }
 
-impl Sub<&Integer> for &Integer {
+impl AddAssign<&Self> for Integer {
+    fn add_assign(&mut self, rhs: &Self) {
+        unimplemented!();
+    }
+}
+
+impl Sub<&Self> for Integer {
     type Output = Integer;
 
-    fn sub(self, rhs: &Integer) -> Self::Output {
+    fn sub(self, rhs: &Self) -> Self::Output {
         self.sub_ref(rhs)
     }
 }
 
-impl Sub<&Integer> for Integer {
-    type Output = Integer;
-
-    fn sub(self, rhs: &Integer) -> Self::Output {
-        self.sub_ref(rhs)
-    }
-}
-
-impl Sub<Integer> for &Integer {
-    type Output = Integer;
-
-    fn sub(self, rhs: Integer) -> Self::Output {
-        self.sub_ref(&rhs)
-    }
-}
-
-impl Sub for Integer {
-    type Output = Integer;
-
-    fn sub(self, rhs: Self) -> Self::Output {
-        self.sub_ref(&rhs)
-    }
-}
-
-impl Mul<&Integer> for &Integer {
-    type Output = Integer;
-
-    fn mul(self, rhs: &Integer) -> Self::Output {
-        self.mul_ref(rhs)
+impl SubAssign<&Self> for Integer {
+    fn sub_assign(&mut self, rhs: &Self) {
+        unimplemented!();
     }
 }
 
@@ -309,19 +277,15 @@ impl Mul<&Integer> for Integer {
     }
 }
 
-impl Mul<Integer> for &Integer {
-    type Output = Integer;
-
-    fn mul(self, rhs: Integer) -> Self::Output {
-        self.mul_ref(&rhs)
+impl MulAssign<&Self> for Integer {
+    fn mul_assign(&mut self, rhs: &Self) {
+        unimplemented!();
     }
 }
 
-impl Mul for Integer {
-    type Output = Integer;
-
-    fn mul(self, rhs: Self) -> Self::Output {
-        self.mul_ref(&rhs)
+impl MulAssign<u64> for Integer {
+    fn mul_assign(&mut self, rhs: u64) {
+        unimplemented!();
     }
 }
 
